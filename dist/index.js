@@ -25651,6 +25651,7 @@ async function run() {
 
     // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
     core.debug(`Waiting ${ms} milliseconds ...`)
+    console.log('Hello world!')
 
     // Log the current timestamp, wait, then log the new timestamp
     core.debug(new Date().toTimeString())
