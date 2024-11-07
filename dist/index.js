@@ -34680,7 +34680,7 @@ const { setFailed, getInput } = __nccwpck_require__(7484);
 
 module.exports.run = async () => {
   try {
-    const webhookBody = await __nccwpck_require__(1690)();
+    const webhookBody = await __nccwpck_require__(3897)();
 
     if (getInput('DEBUG', { required: false }).toLowerCase() === 'true') {
       console.log('Webhook body:', JSON.stringify(webhookBody, null, 2));
@@ -34696,35 +34696,59 @@ module.exports.run = async () => {
 /***/ }),
 
 /***/ 1690:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ ((module) => {
 
-const { setFailed, getInput } = __nccwpck_require__(7484);
-const { context } = __nccwpck_require__(3228);
-const { Octokit } = __nccwpck_require__(9380);
-const { createMessageCard } = __nccwpck_require__(5804);
+const createMessageCard = (run, themeColor, steps) => ({
+  "@type": "MessageCard",
+  "@context": "http://schema.org/extensions",
+  themeColor,
+  summary: `${run.name}`,
+  sections: [
+    {
+      activityTitle: run.name,
+      activitySubtitle: `${run.head_repository.full_name} [#${run.run_number}](${run.html_url})`,
+      activityImage: run.actor.avatar_url,
+      facts: createFacts(run),
+      potentialAction: createActions(run),
+    },
+    {
+      title: "ALL STEPS",
+      facts: steps.map(step => ({ name: step.name, value: step.status.toUpperCase() })),
+    },
+  ],
+});
 
-const getMessage = async () => {
-  try {
-    const { data: run } = await new Octokit({
-      auth: getInput("GITHUB_TOKEN", { required: true }),
-    }).rest.actions.getWorkflowRun({
-      ...context.repo,
-      run_id: context.runId,
-    });
+const createFacts = ({ head_commit, event, head_branch, overallConclusion }) => [
+  { name: "Author:", value: head_commit.author.name },
+  { name: "Event:", value: `\`${event.toUpperCase()}\`` },
+  { name: "Branch:", value: `\`${head_branch.toUpperCase()}\`` },
+  { name: "Status:", value: `\`${overallConclusion}\`` },
+  { name: "Commit:", value: head_commit.message },
+];
 
-    const themeColor = (run.conclusion?.toLowerCase() === 'in_progress' || run.conclusion?.toLowerCase() === 'completed')
-      ? '00F00'
-      : 'FF0000';
-    return createMessageCard(run, themeColor);
-  } catch (error) {
-    console.error("Error in getMessage:", error);
-    setFailed(error.message);
-    throw error;
-  }
+const createActions = ({ html_url, head_repository, head_sha }) => [
+  {
+    "@type": "OpenUri",
+    name: "View Workflow",
+    targets: [{ os: "default", uri: html_url }],
+  },
+  {
+    "@type": "OpenUri",
+    name: "View Commit",
+    targets: [
+      {
+        os: "default",
+        uri: `${head_repository.html_url}/commit/${head_sha}`,
+      },
+    ],
+  },
+];
+
+module.exports = {
+  createFacts,
+  createActions,
+  createMessageCard,
 };
-
-module.exports = getMessage;
-
 
 /***/ }),
 
@@ -34732,7 +34756,7 @@ module.exports = getMessage;
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
 const fetch = (__nccwpck_require__(4034)/* ["default"] */ .Ay);
-const getMessage = __nccwpck_require__(1690);
+const getMessage = __nccwpck_require__(3897);
 const { getInput, info, setFailed } = __nccwpck_require__(7484);
 
 const submitNotification = async () => {
@@ -34768,57 +34792,70 @@ module.exports = submitNotification;
 
 /***/ }),
 
-/***/ 5804:
-/***/ ((module) => {
+/***/ 3897:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
-const createFacts = ({ head_commit, event, head_branch, status }) => [
-    { name: "Author:", value: head_commit.author.name },
-    { name: "Event:", value: `\`${event.toUpperCase()}\`` },
-    { name: "Branch:", value: `\`${head_branch.toUpperCase()}\`` },
-    { name: "Status:", value: `\`${status.toUpperCase()}\`` },
-    { name: "Commit:", value: head_commit.message },
-  ];
-  
-  const createActions = ({ html_url, head_repository, head_sha }) => [
-    {
-      "@type": "OpenUri",
-      name: "View Workflow",
-      targets: [{ os: "default", uri: html_url }],
-    },
-    {
-      "@type": "OpenUri",
-      name: "View Commit",
-      targets: [
-        {
-          os: "default",
-          uri: `${head_repository.html_url}/commit/${head_sha}`,
-        },
-      ],
-    },
-  ];
-  
-  const createMessageCard = (run, themeColor) => ({
-    "@type": "MessageCard",
-    "@context": "http://schema.org/extensions",
-    themeColor,
-    summary: `${run.name} ${run.conclusion}`,
-    sections: [
-      {
-        activityTitle: run.name,
-        activitySubtitle: `${run.head_repository.full_name} [#${run.run_number}](${run.html_url})`,
-        activityImage: run.actor.avatar_url,
-        facts: createFacts(run),
-        potentialAction: createActions(run),
-      },
-    ],
-  });
-  
-  module.exports = {
-    createFacts,
-    createActions,
-    createMessageCard,
-  };
-  
+const { setFailed, getInput } = __nccwpck_require__(7484);
+const { context } = __nccwpck_require__(3228);
+const { Octokit } = __nccwpck_require__(9380);
+const { createMessageCard, createFacts } = __nccwpck_require__(1690);
+
+const getMessage = async () => {
+  try {
+    const octokit = new Octokit({
+      auth: getInput("GITHUB_TOKEN", { required: true }),
+    });
+
+    const { data: run } = await octokit.rest.actions.getWorkflowRun({
+      ...context.repo,
+      run_id: context.runId,
+    });
+    console.log(run);
+
+    const { data: jobs } = await octokit.rest.actions.listJobsForWorkflowRun({
+      ...context.repo,
+      run_id: context.runId,
+    });
+    console.log(jobs);
+
+    const currentJob = jobs.jobs.find(job => job.name === context.job);
+    if (!currentJob) {
+      throw new Error(`Current job (${context.job}) not found`);
+    }
+
+    const currentStepIndex = currentJob.steps.findIndex(step => step.name === "Post Branch Action Test");
+    if (currentStepIndex === -1) {
+      throw new Error(`Current step (${context.step}) not found`);
+    }
+
+    const stepsAboveCurrent = currentJob.steps.slice(0, currentStepIndex).map(step => ({
+      name: step.name,
+      status: step.conclusion || step.status,
+    }));
+    console.log(stepsAboveCurrent);
+
+    const overallConclusion = stepsAboveCurrent.every(step => step.status.toUpperCase() === 'SUCCESS') ? 'SUCCESS' : 'FAILURE';
+
+    const themeColor = (overallConclusion.toLowerCase() === 'success')
+      ? '00FF00'
+      : 'FF0000';
+
+    console.log("Overall conclusion:", overallConclusion);
+
+    return (
+      createFacts(run, overallConclusion),
+      
+      createMessageCard(run, themeColor, stepsAboveCurrent, overallConclusion)
+    );
+  } catch (error) {
+    console.error("Error in getMessage:", error);
+    setFailed(error.message);
+    throw error;
+  }
+};
+
+module.exports = getMessage;
+
 
 /***/ }),
 
