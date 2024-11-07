@@ -14,6 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Branch Action Test
+        uses: satyatulasijalandharch/psychic-octo-goggles@main
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEBHOOK_URI: ${{ secrets.WEBHOOK_URI }}
+          DEBUG: true
+
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
@@ -22,8 +29,6 @@ jobs:
         id: test-action
         uses: ./
         with:
-          milliseconds: 1000
-
-      - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.time }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEBHOOK_URI: ${{ secrets.WEBHOOK_URI }}
+          DEBUG: true

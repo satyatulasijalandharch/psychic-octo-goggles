@@ -1,19 +1,23 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: "Microsoft Teams Action"
+description: "Send notifications to Microsoft Teams"
+author: "Satya Tulasi Jalandhar C H"
 
-# Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  GITHUB_TOKEN:
+    type: string
+    description: "GitHub token used for API authentication. Use secrets.GITHUB_TOKEN"
     required: true
-    default: '1000'
-
-# Define your outputs here.
-outputs:
-  time:
-    description: 'Your output description here'
+  WEBHOOK_URI:
+    type: string
+    description: "Microsoft Teams Webhook URL"
+    required: true
+  DEBUG:
+    type: boolean
+    description: "Debug mode"
+    required: false
 
 runs:
   using: node20
   main: dist/index.js
+  post: dist/index.js
+  post-if: "always()"
