@@ -1,5 +1,5 @@
 const fetch = require("node-fetch").default;
-const getMessage = require("./message");
+const getMessage = require("./utility");
 const { getInput, info, setFailed } = require("@actions/core");
 
 const submitNotification = async () => {
